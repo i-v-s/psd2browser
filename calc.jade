@@ -1,0 +1,256 @@
+style.
+  #canv 
+  {
+    position:absolute; 
+    z-index: 200; 
+    font-size: 20; 
+    color: #FFF;
+    top: 0;
+  }
+  #canv img 
+  {
+    opacity: 0.5;
+    position: absolute;
+    z-index: 40;
+    left: 154px;
+    top: 59px;
+  }
+  #auro
+  {
+    position: absolute;
+    z-index: 100;
+    background-color: #888;
+    padding: 5px;
+    height: 200px;
+    width: 300px;
+    left: 800px;
+    top: 300px;
+    opacity: 0.4;
+  }
+
+  #auro:hover
+  {
+    opacity: 1.0;
+  }
+
+  #auro .tree
+  {
+    padding: 5px;
+    background-color: #FFF;
+    color: #000;
+    overflow: auto;
+    height: calc(100% - 40px);
+    width: calc(100% - 10px);
+  }
+
+  #auro .tree div
+  {
+    font-family: monospace;
+    margin-left: 15px;
+  }
+
+  #auro .tree > div div
+  {
+    display: none;
+  }
+
+  #auro .tree div.expand > div
+  {
+    display: block;
+  }
+
+  #auro .tree div:before
+  {
+    content: '+';
+    margin: 0 5px;
+    padding: 0 3px;
+    border-radius: 8px;
+    background-color: #8F8;
+  }
+
+  #auro .tree div.expand:before
+  {
+    content: '-';
+  }
+
+  #auro .tree div.sel > span
+  {
+    background-color: #00F;
+    color: #FFF;
+  }
+  canvas
+  {
+    position:absolute;
+    z-index: 1000;
+    left: 10px;
+    top: 10px;
+    width: 100px;
+    height: 100px;
+    border: 1px solid white;
+  }
+div#canv
+  img#calc(style='' src='assets/img/filter.png' hidden)
+  div#psd(style='position:absolute; color: red;')
+  div#auro
+    div#doctree.tree
+    div
+      input#opa(style='margin:5px;' type="range" min='0.0' max='1.0' step='0.05')
+      button#resetpos Сброс
+      button#ocr OCR
+script(src='psd/index.js')
+script.
+  function oncb(e)
+  {
+    var p = e.target.parentElement;
+    var data = p['data-data'];
+    data.hidden = p['data-elem'].hidden = !e.target.checked;
+    localStorage['auro_' + p['data-path']] = JSON.stringify(data);
+  }
+  function renderPSD(psd, el, path, doc, pos)
+  {
+    'use strict';
+    if(!pos) pos = {x: 0, y: 0};
+    var z = 0;
+    for(var i in psd)
+    {
+      var it = psd[i];
+      var d = document.createElement('div');
+      doc.appendChild(d);
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.style.display = 'inline-block';
+      cb.onclick = oncb;
+      //
+      d.appendChild(cb);
+      var span = document.createElement('span');
+      d.appendChild(span);
+      span.innerText = it.name;
+
+      var e = document.createElement('div');
+      el.appendChild(e);
+      e.style.position = 'absolute';
+      e.style.width = '' + it.w + 'px';
+      e.style.height = '' + it.h + 'px';
+      var ps = {x: it.x, y: it.y};
+      e.style.top = '' + (it.y - pos.y) + 'px';
+      e.style.left = '' + (it.x - pos.x) + 'px';
+      e.style['z-index'] = 100 - ++z;
+      e.title = it.name;
+      var data = localStorage['auro_' + path + i];
+      if(data) data = JSON.parse(data);
+      else data = {};
+      e.hidden = data.hidden !== false;
+      cb.checked = !e.hidden;
+      d['data-elem'] = e;
+      d['data-data'] = data;
+      d['data-path'] = path + i;
+      
+      if(it.items) renderPSD(it.items, e, path + i + '/', d, ps);
+      else 
+      {
+        e.style['background-image'] = 'url("' + it.img + '")';
+        e.style['background-repeat'] = 'no-repeat';
+      }
+    }
+  }
+  var selected = null;
+  function onSelect(e)
+  {
+    if(e.target.tagName === 'SPAN')
+    {
+      if(selected) selected.classList.remove('sel');
+      selected = e.target.parentElement;
+      selected.classList.add('sel');
+    }
+    else
+    {
+      e.target.classList.toggle('expand');
+    }
+  }  
+  var dt = document.getElementById('doctree');
+  var docpsd = document.getElementById('psd');
+  renderPSD(psd, docpsd, 'psd/', dt);
+  dt.onclick = onSelect;
+  document.getElementById('opa').oninput = function(e)
+  {
+    docpsd.style.opacity = e.target.value;
+  }
+  var i = document.getElementById('calc');
+  var mx, my, md = false;
+  var lx = 0, ly = 0;
+  document.getElementById('canv').onclick = function(e)
+  {
+    if(e.target !== document.getElementById('canv')) return;
+    i.hidden = !i.hidden;
+  }
+  docpsd.onmousedown = function(e)
+  {
+    e.preventDefault();
+    if(!selected) return;
+    md = e.button + 1;
+    mx = e.pageX;
+    my = e.pageY;
+  }
+  docpsd.onmousemove = function(e)
+  {
+    if(!md) return;
+    if(md === 1)
+    {
+      var style = selected['data-elem'].style;
+      
+      style.left = (parseInt(style.left) + e.pageX - mx) + 'px';
+      style.top = (parseInt(style.top) + e.pageY - my) + 'px';
+      mx = e.pageX;
+      my = e.pageY;
+    }
+    else
+    {
+      i.style.width = (e.pageX) + 'px';
+    }
+  }
+  docpsd.onmouseup = function(e)
+  {
+    if(md === 1)
+    {
+      lx += e.pageX - mx
+      ly += e.pageY - my
+    }
+    md = false;
+  }
+  document.getElementById('ocr').onclick = function()
+  {
+    var canv = document.createElement('canvas');
+    document.body.appendChild(canv);
+    canv.height = 100;
+    canv.width = 100;
+    var ctx = canv.getContext('2d');
+    ctx.font = 'normal 14px Arial';
+    ctx.fillText('ABCDEFGHIJKLMNOPQRSTUVWXYZ', 20, 20);
+    var data = ctx.getImageData(20, 0, 80, 30);
+    var w = data.width;
+    var m = false;
+    var minx = 0;
+    var miny = data.height;
+    var maxy = 0;
+    var maxx = 0;
+    for(var x = 0; x < data.width; x++)
+    {
+      var no = true;
+      for(var y = 0; y < data.height; y++)
+      {
+        var c = data.data[(x + y * w) * 4 + 3];
+        if(c > 10)
+        {
+          no = false;
+          if(!m) {minx = x; m = true;}
+          if(y > maxy) maxy = y;
+          if(y < miny) miny = y;
+        }
+      }
+      if(no && m)
+      {
+        maxx = x - 1;
+      }
+    }
+
+  }
